@@ -15,7 +15,7 @@ import {
 } from './types';
 import { Duplex } from 'stream';
 
-import fetch from 'node-fetch'
+import axios from 'axios'
 const format = require('./utils/format');
 const JSONbig = require('json-bigint');
 
@@ -161,6 +161,7 @@ export class Client {
     const protocol = this.options.secure ? 'https' : 'http';
     const url = `${protocol}://${this.options.host}:${this.options.port}${path}`;
     const requestOptions: FetchRequestOptions = {
+      url,
       method,
     };
 
@@ -175,7 +176,7 @@ export class Client {
       }
       if (body) {
         requestOptions.headers['content-length'] = Buffer.byteLength(body);
-        requestOptions.body = body;
+        requestOptions.data = body;
       }
     }
     if (this.options.authorization) {
@@ -183,15 +184,13 @@ export class Client {
     }
 
     // Perform the request and handle results.
-    fetch(url, {
-
-    })
-    const response = await fetch(url, {
+    const response = await axios({
+      url,
       ...requestOptions,
     });
 
     // Always consume the response body. See https://github.com/nodejs/undici#garbage-collection
-    const text = await response.text();
+    const text = await response.data
 
     // Undici does not throw an error on certain status codes, this leaves that to us
     if (response.status < 200 || response.status > 299) {
@@ -317,7 +316,7 @@ export class Client {
       headers: headers,
     };
     const jsonStreamStringify = JSONStream.stringify();
-    const postRequest = fetch(url, optionsRequest);
+    const postRequest = axios(url, optionsRequest);
     jsonStreamStringify.pipe(postRequest);
     return duplexer(jsonStreamStringify, postRequest);
   }

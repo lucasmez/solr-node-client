@@ -1,7 +1,7 @@
+import { AxiosRequestConfig } from 'axios';
 import { TlsOptions } from 'tls';
-import { RequestInit } from 'node-fetch'
 
-export type FetchRequestOptions = RequestInit
+export type FetchRequestOptions = AxiosRequestConfig
 
 export type ResourceOptions = {
   /**
