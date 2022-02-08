@@ -7,16 +7,15 @@ import * as versionUtils from './utils/version';
 import {
   AddResponse,
   CommonResponse,
+  FetchRequestOptions,
   FullSolrClientParams,
   JsonResponseData,
   ResourceOptions,
   SolrClientParams,
-  UndiciRequestOptions,
 } from './types';
 import { Duplex } from 'stream';
-import { request, Client as UndiciClient } from 'undici';
 
-const oldRequest = require('request');
+import fetch from 'node-fetch'
 const format = require('./utils/format');
 const JSONbig = require('json-bigint');
 
@@ -70,7 +69,10 @@ export class Client {
   private readonly ADMIN_PING_HANDLER: string;
   private readonly COLLECTIONS_HANDLER: string;
   private readonly SELECT_HANDLER: string;
-  private readonly undiciClient: UndiciClient;
+
+	private fetchOptions = { }
+	private fetchUri = ''
+
 
   constructor(options: SolrClientParams = {}) {
     this.options = {
@@ -84,7 +86,6 @@ export class Client {
       get_max_request_entity_size: options.get_max_request_entity_size || false,
       solrVersion: options.solrVersion || versionUtils.Solr3_2,
       ipVersion: options.ipVersion == 6 ? 6 : 4,
-      request: options.request || null,
     };
 
     // Default paths of all request handlers
@@ -106,12 +107,8 @@ export class Client {
       ? 'https://'
       : 'http://';
 
-    this.undiciClient = new UndiciClient(
-      `${urlPrefix}${this.options.host}:${this.options.port}`,
-      {
-        connect: this.options.tls,
-      }
-    );
+	  this.fetchUri = `${urlPrefix}${this.options.host}:${this.options.port}`;
+
   }
 
   get solrVersion(): number {
@@ -163,8 +160,7 @@ export class Client {
   ): Promise<T> {
     const protocol = this.options.secure ? 'https' : 'http';
     const url = `${protocol}://${this.options.host}:${this.options.port}${path}`;
-    const requestOptions: UndiciRequestOptions = {
-      ...this.options.request,
+    const requestOptions: FetchRequestOptions = {
       method,
     };
 
@@ -187,17 +183,19 @@ export class Client {
     }
 
     // Perform the request and handle results.
-    const response = await this.undiciClient.request({
-      path: url,
+    fetch(url, {
+
+    })
+    const response = await fetch(url, {
       ...requestOptions,
     });
 
     // Always consume the response body. See https://github.com/nodejs/undici#garbage-collection
-    const text = await response.body.text();
+    const text = await response.text();
 
     // Undici does not throw an error on certain status codes, this leaves that to us
-    if (response.statusCode < 200 || response.statusCode > 299) {
-      throw new Error(`Request HTTP error ${response.statusCode}: ${text}`);
+    if (response.status < 200 || response.status > 299) {
+      throw new Error(`Request HTTP error ${response.status}: ${text}`);
     }
 
     return pickJSON(this.options.bigint).parse(text);
@@ -313,14 +311,13 @@ export class Client {
       headers['authorization'] = this.options.authorization;
     }
     const protocol = this.options.secure ? 'https' : 'http';
-    const optionsRequest = {
-      url:
-        protocol + '://' + this.options.host + ':' + this.options.port + path,
+    const url =  protocol + '://' + this.options.host + ':' + this.options.port + path;
+    const optionsRequest: FetchRequestOptions = {
       method: 'POST',
       headers: headers,
     };
     const jsonStreamStringify = JSONStream.stringify();
-    const postRequest = oldRequest(optionsRequest);
+    const postRequest = fetch(url, optionsRequest);
     jsonStreamStringify.pipe(postRequest);
     return duplexer(jsonStreamStringify, postRequest);
   }

@@ -1,10 +1,7 @@
-import { Dispatcher } from 'undici';
 import { TlsOptions } from 'tls';
+import { RequestInit } from 'node-fetch'
 
-export type UndiciRequestOptions = Omit<
-  Dispatcher.RequestOptions,
-  'origin' | 'path'
-> & { tls?: TlsOptions };
+export type FetchRequestOptions = RequestInit
 
 export type ResourceOptions = {
   /**
@@ -68,11 +65,6 @@ export type SolrClientParams = {
   tls?: TlsOptions;
 
   /**
-   * Custom request options to use with every request.
-   */
-  request?: UndiciRequestOptions | null;
-
-  /**
    * One of [4, 6].
    * Passed to http/https lib's "family" option.
    */
@@ -99,7 +91,6 @@ export type FullSolrClientParams = {
   secure: boolean;
   bigint: boolean;
   tls?: TlsOptions;
-  request?: UndiciRequestOptions | null;
   ipVersion: number;
   solrVersion: number;
   get_max_request_entity_size: boolean | number;
